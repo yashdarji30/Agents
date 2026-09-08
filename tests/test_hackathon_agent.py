@@ -68,3 +68,21 @@ def test_discord_embed_payload_builder():
     assert "❓ Quiz Time!" in fields
     assert "||**Answer:** A - Main protects working code state.||" in fields["❓ Quiz Time!"]
 
+def test_hackathon_graph_flow():
+    from agent.hackathon_state import HackathonAgentState
+    from agent.hackathon_graph import topic_curator_node
+    
+    state: HackathonAgentState = {
+        "messages": [],
+        "history_topics": ["Ideation & Scoping"],
+        "current_post": None,
+        "status": "init",
+        "error": None
+    }
+    
+    new_state = topic_curator_node(state)
+    assert new_state["status"] == "topic_curated"
+    assert len(new_state["history_topics"]) == 2
+    assert new_state["history_topics"][-1] != "Ideation & Scoping"
+
+
