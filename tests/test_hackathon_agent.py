@@ -85,4 +85,32 @@ def test_hackathon_graph_flow():
     assert len(new_state["history_topics"]) == 2
     assert new_state["history_topics"][-1] != "Ideation & Scoping"
 
+def test_hackathon_interval_config():
+    import os
+    from unittest.mock import patch
+    from Discord.scheduler import get_post_interval_seconds
+    
+    with patch.dict(os.environ, {"POST_INTERVAL_HOURS": "2.5"}):
+        assert get_post_interval_seconds() == 9000.0
+    
+    with patch.dict(os.environ, {}, clear=True):
+        assert get_post_interval_seconds() == 18000.0
+
+def test_hackathon_scheduler_cycle():
+    from unittest.mock import patch, MagicMock
+    from Discord.scheduler import run_hackathon_cycle
+    
+    with patch("Discord.scheduler.build_hackathon_graph") as mock_build:
+        mock_app = MagicMock()
+        mock_app.invoke.return_value = {
+            "status": "published",
+            "history_topics": ["MVP Architecture"]
+        }
+        mock_build.return_value = mock_app
+        
+        result = run_hackathon_cycle(history_topics=[])
+        assert result["status"] == "published"
+        assert mock_app.invoke.called
+
+
 
