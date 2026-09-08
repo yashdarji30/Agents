@@ -35,19 +35,21 @@ def topic_curator_node(state: HackathonAgentState) -> Dict[str, Any]:
 def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
     api_key = os.getenv("GOOGLE_API_KEY")
     current_category = state["history_topics"][-1]
+    print(f"[Content Generator]: Generating hackathon post for category '{current_category}'...")
     
     candidate_models = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.7-flash"
     ]
+
 
     
     llm_instances = [
         ChatGoogleGenerativeAI(
             model=m,
             google_api_key=api_key,
-            max_retries=1
+            max_retries=2
         ).with_structured_output(HackathonPost)
         for m in candidate_models
     ]
@@ -72,11 +74,13 @@ Include:
             SystemMessage(content="You generate structured hackathon advice."),
             HumanMessage(content=prompt)
         ])
+        print(f"[Content Generator Success]: Post '{post.title}' generated successfully.")
         return {
             "current_post": post,
             "status": "content_generated"
         }
     except Exception as e:
+        print(f"[Content Generator Error]: Failed to generate content: {e}")
         return {
             "status": "error",
             "error": str(e)
@@ -85,13 +89,16 @@ Include:
 def discord_publisher_node(state: HackathonAgentState) -> Dict[str, Any]:
     post = state.get("current_post")
     if not post:
-        return {"status": "publish_skipped", "error": "No current post available"}
+        error_msg = state.get("error", "No current post generated")
+        print(f"[Discord Publisher Skipped]: Skipping publish because no post is available. Cause: {error_msg}")
+        return {"status": "publish_skipped", "error": error_msg}
     
     success = publish_to_discord(post)
     if success:
         return {"status": "published"}
     else:
         return {"status": "publish_failed", "error": "Discord publish call returned False"}
+
 
 def build_hackathon_graph():
     workflow = StateGraph(HackathonAgentState)
