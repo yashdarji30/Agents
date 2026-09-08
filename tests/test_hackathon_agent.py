@@ -34,3 +34,37 @@ def test_hackathon_pydantic_models():
     }
     assert state["status"] == "ready"
     assert len(state["history_topics"]) == 1
+
+def test_discord_embed_payload_builder():
+    from agent.hackathon_state import MCQOption, MCQuestion, HackathonPost
+    from Discord.webhook import build_discord_embed_payload
+    
+    post = HackathonPost(
+        title="Git Workflow Tips",
+        category="Team Synergy & Git",
+        strategy_tip="Use feature branches and lock main.",
+        actionable_checklist=["Create dev branch", "PR reviews before merge"],
+        mcqs=[
+            MCQuestion(
+                question="Why protect main branch?",
+                options=[
+                    MCQOption(label="A", text="Prevents breaking production"),
+                    MCQOption(label="B", text="Makes git slower")
+                ],
+                correct_option="A",
+                explanation="Main protects working code state."
+            )
+        ]
+    )
+    
+    payload = build_discord_embed_payload(post)
+    assert "embeds" in payload
+    embed = payload["embeds"][0]
+    assert embed["title"] == "🚀 Hackathon Prep: Git Workflow Tips"
+    assert embed["color"] == 0x5865F2
+    fields = {f["name"]: f["value"] for f in embed["fields"]}
+    assert "💡 Strategy Tip" in fields
+    assert "📋 Actionable Checklist" in fields
+    assert "❓ Quiz Time!" in fields
+    assert "||**Answer:** A - Main protects working code state.||" in fields["❓ Quiz Time!"]
+
