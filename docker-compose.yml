@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  hackathon-agent:
+    build: .
+    container_name: hackathon_discord_agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POST_INTERVAL_HOURS=${POST_INTERVAL_HOURS:-5}
