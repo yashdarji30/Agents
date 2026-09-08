@@ -37,11 +37,11 @@ def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
     current_category = state["history_topics"][-1]
     
     candidate_models = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.7-flash",
-        "gemini-2.5-flash"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
     ]
+
     
     llm_instances = [
         ChatGoogleGenerativeAI(
