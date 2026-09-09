@@ -1,0 +1,6 @@
+{
+  "post_interval_hours": 5.0,
+  "post_interval_minutes": null,
+  "max_runs": 5,
+  "comment": "Set post_interval_minutes (e.g. 10.0) and max_runs (e.g. 3) for quick testing, or post_interval_hours for production."
+}

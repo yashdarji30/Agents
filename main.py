@@ -45,6 +45,8 @@ if __name__ == "__main__":
     parser.add_argument("--hackathon-now", action="store_true", help="Trigger single hackathon generation and Discord post immediately")
     parser.add_argument("--hackathon-schedule", action="store_true", help="Run background continuous scheduler")
     parser.add_argument("--interval-hours", type=float, default=None, help="Post interval in hours when running scheduler")
+    parser.add_argument("--interval-minutes", type=float, default=None, help="Post interval in minutes when running scheduler")
+    parser.add_argument("--max-runs", type=int, default=None, help="Maximum number of posting runs before stopping")
     parser.add_argument("query", nargs="?", default=None, help="Research prompt for default agent")
     
     args, unknown = parser.parse_known_args()
@@ -53,7 +55,11 @@ if __name__ == "__main__":
         print("=== Triggering Immediate Hackathon Agent Post ===")
         run_hackathon_cycle()
     elif args.hackathon_schedule:
-        start_scheduler(interval_hours=args.interval_hours)
+        start_scheduler(
+            interval_hours=args.interval_hours,
+            interval_minutes=args.interval_minutes,
+            max_runs=args.max_runs
+        )
     else:
         query_text = args.query or "Explain LangGraph StateGraph, MemorySaver checkpointers, and ToolNode with an example."
         run_cli_research(query_text)
