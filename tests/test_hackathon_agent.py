@@ -137,5 +137,48 @@ def test_hackathon_scheduler_cycle():
         assert result["status"] == "published"
         assert mock_app.invoke.called
 
+def test_full_hackathon_graph_workflow():
+    from unittest.mock import patch, MagicMock
+    from agent.hackathon_graph import build_hackathon_graph
+    from agent.hackathon_state import HackathonPost, ReviewerQA
+
+    fake_post = HackathonPost(
+        title="PostgreSQL Index & Defense",
+        post_type="Technical Defense Guide",
+        category="PostgreSQL Schema & Index Optimization",
+        judge_perspective="Judges check EXPLAIN ANALYZE output.",
+        deep_dive_content="Use B-tree indexing on foreign keys.",
+        reviewer_qa_pairs=[
+            ReviewerQA(question="Why indexed keys?", winning_answer="Prevents full table scans.")
+        ],
+        actionable_checklist=["CREATE INDEX idx_user_id"]
+    )
+
+    with patch("agent.hackathon_graph.ChatGoogleGenerativeAI") as mock_llm, \
+         patch("agent.hackathon_graph.publish_to_discord") as mock_publish:
+        
+        mock_structured = MagicMock()
+        mock_llm.return_value.with_structured_output.return_value = mock_structured
+        mock_structured.invoke.return_value = fake_post
+        mock_publish.return_value = True
+
+        app = build_hackathon_graph()
+        initial_state = {
+            "messages": [],
+            "history_topics": [],
+            "history_archetypes": [],
+            "current_post": None,
+            "status": "init",
+            "error": None
+        }
+
+        final_state = app.invoke(initial_state)
+
+        assert final_state["status"] == "published"
+        assert len(final_state["history_topics"]) == 1
+        assert len(final_state["history_archetypes"]) == 1
+        assert mock_publish.called
+
+
 
 
