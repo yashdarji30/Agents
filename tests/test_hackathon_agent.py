@@ -20,6 +20,17 @@ def test_hackathon_post_schema_validation():
     assert len(post.reviewer_qa_pairs) == 1
     assert post.reviewer_qa_pairs[0].question.startswith("Why choose PostgreSQL")
 
+def test_topic_curator_node_tracks_categories_and_archetypes():
+    from agent.hackathon_graph import topic_curator_node, HACKATHON_CATEGORIES, HACKATHON_ARCHETYPES
+    state = {"history_topics": [], "history_archetypes": []}
+    res = topic_curator_node(state)
+    
+    assert "history_topics" in res
+    assert "history_archetypes" in res
+    assert len(res["history_topics"]) == 1
+    assert len(res["history_archetypes"]) == 1
+    assert res["history_topics"][0] in HACKATHON_CATEGORIES
+    assert res["history_archetypes"][0] in HACKATHON_ARCHETYPES
 
 def test_hackathon_graph_flow():
     from agent.hackathon_state import HackathonAgentState

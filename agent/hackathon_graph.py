@@ -9,26 +9,40 @@ from agent.hackathon_state import HackathonAgentState, HackathonPost
 from Discord.webhook import publish_to_discord
 
 HACKATHON_CATEGORIES = [
-    "Ideation & Scoping",
-    "MVP Architecture",
-    "Team Synergy & Git",
-    "Presentation & Pitching",
-    "Managing Sprint Time",
-    "API & Third-Party Integration"
+    "PostgreSQL Schema & Index Optimization",
+    "Express API Architecture & Middleware Defense",
+    "React State & Render Performance",
+    "Node.js Async Architecture & Event Loop",
+    "Judge Interrogation & Problem Statement Defense",
+    "Full-Stack System Design & Edge Case Handling"
+]
+
+HACKATHON_ARCHETYPES = [
+    "Technical Defense Guide",
+    "Case Study Walkthrough",
+    "Reviewer Cheat Sheet"
 ]
 
 def topic_curator_node(state: HackathonAgentState) -> Dict[str, Any]:
-    history = state.get("history_topics", [])
-    available = [c for c in HACKATHON_CATEGORIES if c not in history]
-    if not available:
-        available = HACKATHON_CATEGORIES
-        history = []
+    topic_history = state.get("history_topics", [])
+    archetype_history = state.get("history_archetypes", [])
     
-    selected_category = random.choice(available)
-    updated_history = list(history) + [selected_category]
+    available_topics = [c for c in HACKATHON_CATEGORIES if c not in topic_history]
+    if not available_topics:
+        available_topics = HACKATHON_CATEGORIES
+        topic_history = []
+        
+    available_archetypes = [a for a in HACKATHON_ARCHETYPES if a not in archetype_history]
+    if not available_archetypes:
+        available_archetypes = HACKATHON_ARCHETYPES
+        archetype_history = []
+        
+    selected_category = random.choice(available_topics)
+    selected_archetype = random.choice(available_archetypes)
     
     return {
-        "history_topics": updated_history,
+        "history_topics": list(topic_history) + [selected_category],
+        "history_archetypes": list(archetype_history) + [selected_archetype],
         "status": "topic_curated"
     }
 
