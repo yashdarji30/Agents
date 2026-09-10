@@ -63,6 +63,36 @@ def test_content_generator_node_invokes_llm():
         assert result["status"] == "content_generated"
         assert result["current_post"].title == "Express Middleware Security"
 
+def test_build_discord_embed_payload_structures_correctly():
+    from agent.hackathon_state import HackathonPost, ReviewerQA
+    from Discord.webhook import build_discord_embed_payload
+
+    qa = ReviewerQA(
+        question="How do you optimize React render cycles?",
+        winning_answer="Use React.memo, useParam hooks, and defer expensive state computations to worker threads."
+    )
+    post = HackathonPost(
+        title="React Render Optimization",
+        post_type="Reviewer Cheat Sheet",
+        category="React State & Render Performance",
+        judge_perspective="Judges look for UI responsiveness during live demos.",
+        deep_dive_content="### React Performance\nAvoid inline functions in JSX.",
+        reviewer_qa_pairs=[qa],
+        actionable_checklist=["Profile with React DevTools", "Memoize context providers"]
+    )
+    
+    payload = build_discord_embed_payload(post)
+    embed = payload["embeds"][0]
+    
+    assert "Reviewer Cheat Sheet" in embed["title"]
+    assert embed["color"] == 0x8E44AD  # Purple for Reviewer Cheat Sheet
+    assert "🎯 Reviewer Interrogation & Winning Answers" in [f["name"] for f in embed["fields"]]
+    
+    # Check spoiler tag formatting in Q&A field
+    qa_field = next(f for f in embed["fields"] if "Reviewer Interrogation" in f["name"])
+    assert "||" in qa_field["value"]
+    assert "Winning Answer:" in qa_field["value"]
+
 def test_hackathon_graph_flow():
     from agent.hackathon_state import HackathonAgentState
     from agent.hackathon_graph import topic_curator_node
