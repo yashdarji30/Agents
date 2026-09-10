@@ -38,25 +38,24 @@ def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
     print(f"[Content Generator]: Generating hackathon post for category '{current_category}'...")
     
     candidate_models = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.7-flash"
+        "gemini-3.6-flash"
     ]
 
-
-    
     llm_instances = [
         ChatGoogleGenerativeAI(
             model=m,
             google_api_key=api_key,
-            max_retries=2
+            max_retries=3
         ).with_structured_output(HackathonPost)
         for m in candidate_models
     ]
     
     primary_llm = llm_instances[0]
     fallbacks = llm_instances[1:]
-    structured_llm = primary_llm.with_fallbacks(fallbacks, exceptions_to_handle=(Exception,))
+    if fallbacks:
+        structured_llm = primary_llm.with_fallbacks(fallbacks, exceptions_to_handle=(Exception,))
+    else:
+        structured_llm = primary_llm
     
     prompt = f"""You are a top hackathon mentor. Generate a high-value, practical hackathon preparation post for participants.
 Category focus: {current_category}
@@ -91,13 +90,13 @@ def discord_publisher_node(state: HackathonAgentState) -> Dict[str, Any]:
     if not post:
         error_msg = state.get("error", "No current post generated")
         print(f"[Discord Publisher Skipped]: Skipping publish because no post is available. Cause: {error_msg}")
-        return {"status": "publish_skipped", "error": error_msg}
+        raise RuntimeError(f"Hackathon Agent cycle failed during content generation: {error_msg}")
     
     success = publish_to_discord(post)
     if success:
         return {"status": "published"}
     else:
-        return {"status": "publish_failed", "error": "Discord publish call returned False"}
+        raise RuntimeError("Discord publish failed: DISCORD_WEBHOOK_URL may be missing or invalid in environment/secrets.")
 
 
 def build_hackathon_graph():

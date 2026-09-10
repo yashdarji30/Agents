@@ -80,12 +80,9 @@ load_dotenv()
 
 # Available Gemini models
 AVAILABLE_MODELS = [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.7-flash",
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash"
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro"
 ]
 
 # Initialize session state variables
@@ -93,7 +90,7 @@ if "thread_id" not in st.session_state:
     st.session_state["thread_id"] = str(uuid.uuid4())[:8]
 
 if "selected_model" not in st.session_state:
-    st.session_state["selected_model"] = "gemini-3.6-flash"
+    st.session_state["selected_model"] = "gemini-2.0-flash"
 
 if "app_graph" not in st.session_state:
     st.session_state["app_graph"] = build_graph(st.session_state["selected_model"])
