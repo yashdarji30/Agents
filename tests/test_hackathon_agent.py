@@ -32,6 +32,37 @@ def test_topic_curator_node_tracks_categories_and_archetypes():
     assert res["history_topics"][0] in HACKATHON_CATEGORIES
     assert res["history_archetypes"][0] in HACKATHON_ARCHETYPES
 
+def test_content_generator_node_invokes_llm():
+    from unittest.mock import patch, MagicMock
+    from agent.hackathon_graph import content_generator_node
+    from agent.hackathon_state import HackathonPost, ReviewerQA
+
+    with patch("agent.hackathon_graph.ChatGoogleGenerativeAI") as mock_llm_cls:
+        mock_instance = MagicMock()
+        mock_structured = MagicMock()
+        mock_llm_cls.return_value.with_structured_output.return_value = mock_structured
+        
+        fake_post = HackathonPost(
+            title="Express Middleware Security",
+            post_type="Technical Defense Guide",
+            category="Express API Architecture & Middleware Defense",
+            judge_perspective="Judges test input validation and CORS settings.",
+            deep_dive_content="Use express-validator and helmet.",
+            reviewer_qa_pairs=[
+                ReviewerQA(question="How do you stop SQL injection?", winning_answer="Parameterized queries with pg-promise or Prisma.")
+            ],
+            actionable_checklist=["Add express-rate-limit"]
+        )
+        mock_structured.invoke.return_value = fake_post
+        
+        state = {
+            "history_topics": ["Express API Architecture & Middleware Defense"],
+            "history_archetypes": ["Technical Defense Guide"]
+        }
+        result = content_generator_node(state)
+        assert result["status"] == "content_generated"
+        assert result["current_post"].title == "Express Middleware Security"
+
 def test_hackathon_graph_flow():
     from agent.hackathon_state import HackathonAgentState
     from agent.hackathon_graph import topic_curator_node

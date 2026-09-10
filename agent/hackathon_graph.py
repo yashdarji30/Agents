@@ -49,7 +49,8 @@ def topic_curator_node(state: HackathonAgentState) -> Dict[str, Any]:
 def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
     api_key = os.getenv("GOOGLE_API_KEY")
     current_category = state["history_topics"][-1]
-    print(f"[Content Generator]: Generating hackathon post for category '{current_category}'...")
+    current_archetype = state.get("history_archetypes", ["Technical Defense Guide"])[-1]
+    print(f"[Content Generator]: Generating hackathon post for category '{current_category}' [Archetype: '{current_archetype}']...")
     
     candidate_models = [
         "gemini-3.6-flash"
@@ -71,23 +72,34 @@ def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
     else:
         structured_llm = primary_llm
     
-    prompt = f"""You are a top hackathon mentor. Generate a high-value, practical hackathon preparation post for participants.
-Category focus: {current_category}
+    system_prompt = (
+        "You are a Principal Hackathon Judge, Veteran Technical Director, and PERN Stack Architect (PostgreSQL, Express.js, React, Node.js). "
+        "Your mission is to provide deep-dive technical guidance, system architecture patterns, and defense strategies to help hackathon teams "
+        "build rock-solid MVPs and effortlessly defend their tech stack when grilled by judges."
+    )
+    
+    prompt = f"""Generate an in-depth hackathon technical post.
 
-Include:
-1. A clear, catchy title.
-2. The category ({current_category}).
-3. A detailed, actionable strategy tip.
-4. An actionable checklist of 3-4 steps.
-5. 1-2 interactive multiple-choice questions with 4 options (A, B, C, D), correct answer, and explanation.
+Post Archetype: {current_archetype}
+Category Focus: {current_category}
+Target Tech Stack: PostgreSQL, Express.js, React, Node.js (PERN Stack)
+
+Requirements for Archetype '{current_archetype}':
+1. Title: High-impact, technical title.
+2. Category: {current_category}.
+3. Post Type: {current_archetype}.
+4. Judge Perspective: Detailed breakdown of what judges test, critique, and question regarding {current_category}.
+5. Deep Dive Content: Lengthy, comprehensive technical markdown guide. Include actual code/schema snippets (e.g. SQL queries, Express middleware, React custom hooks) relevant to the PERN stack.
+6. Reviewer QA Pairs: 2-3 tough questions a judge will ask about this topic/stack with bulletproof, winning answers.
+7. Actionable Checklist: 3-5 concrete step-by-step execution items for the team.
 """
     
     try:
         post: HackathonPost = structured_llm.invoke([
-            SystemMessage(content="You generate structured hackathon advice."),
+            SystemMessage(content=system_prompt),
             HumanMessage(content=prompt)
         ])
-        print(f"[Content Generator Success]: Post '{post.title}' generated successfully.")
+        print(f"[Content Generator Success]: Post '{post.title}' ({post.post_type}) generated successfully.")
         return {
             "current_post": post,
             "status": "content_generated"
