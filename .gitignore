@@ -19,5 +19,6 @@ htmlcov/
 
 # Scratch & IDE
 scratch/
+.superpowers/
 .idea/
 .vscode/
