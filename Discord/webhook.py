@@ -59,7 +59,10 @@ def build_discord_embed_payload(post: HackathonPost) -> Dict[str, Any]:
         }
     }
     
-    return {"embeds": [embed]}
+    return {
+        "content": "@everyone 🚀 **New Hackathon Insights & Guide Posted!**",
+        "embeds": [embed]
+    }
 
 def publish_to_discord(post: HackathonPost, webhook_url: Optional[str] = None) -> bool:
     url = webhook_url or os.getenv("DISCORD_WEBHOOK_URL")

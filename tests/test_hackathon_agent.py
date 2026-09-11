@@ -118,8 +118,9 @@ def test_hackathon_interval_config():
     with patch.dict(os.environ, {"POST_INTERVAL_HOURS": "2.5"}):
         assert get_post_interval_seconds() == 9000.0
     
-    with patch.dict(os.environ, {}, clear=True):
-        assert get_post_interval_seconds() == 18000.0
+    with patch("Discord.scheduler.load_config", return_value={}):
+        with patch.dict(os.environ, {}, clear=True):
+            assert get_post_interval_seconds() == 18000.0
 
 def test_hackathon_scheduler_cycle():
     from unittest.mock import patch, MagicMock
