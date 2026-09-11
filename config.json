@@ -1,6 +1,7 @@
 {
-  "post_interval_hours": 5.0,
+  "post_interval_hours": 6.0,
   "post_interval_minutes": null,
-  "max_runs": 5,
-  "comment": "Set post_interval_minutes (e.g. 10.0) and max_runs (e.g. 3) for quick testing, or post_interval_hours for production."
+  "end_date": "2026-10-02T00:00:00",
+  "max_runs": null,
+  "comment": "Runs every 6.0 hours until 2nd of October 2026."
 }

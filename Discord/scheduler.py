@@ -2,6 +2,7 @@ import time
 import os
 import json
 import argparse
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 from agent.hackathon_graph import build_hackathon_graph
@@ -60,6 +61,17 @@ def get_post_interval_seconds(custom_hours: Optional[float] = None, custom_minut
 
 def run_hackathon_cycle(history_topics: Optional[List[str]] = None) -> dict:
     load_dotenv()
+    cfg = load_config()
+    end_date_str = cfg.get("end_date")
+    if end_date_str:
+        try:
+            target_end_date = datetime.fromisoformat(end_date_str)
+            if datetime.now() >= target_end_date:
+                print(f"[Hackathon Scheduler]: Reached end date ({target_end_date}). Skipping execution cycle.")
+                return {"status": "skipped_end_date"}
+        except Exception as e:
+            print(f"[Hackathon Scheduler Warning]: Could not parse end_date: {e}")
+
     print("\n[Hackathon Scheduler]: Starting execution cycle...")
     app = build_hackathon_graph()
     
@@ -80,6 +92,14 @@ def start_scheduler(interval_hours: Optional[float] = None, interval_minutes: Op
     cfg = load_config()
     
     effective_max_runs = max_runs if max_runs is not None else cfg.get("max_runs")
+    end_date_str = cfg.get("end_date")
+    target_end_date = None
+    if end_date_str:
+        try:
+            target_end_date = datetime.fromisoformat(end_date_str)
+        except Exception as e:
+            print(f"[Scheduler Warning]: Could not parse end_date '{end_date_str}': {e}")
+
     interval_seconds = get_post_interval_seconds(custom_hours=interval_hours, custom_minutes=interval_minutes)
     
     minutes = interval_seconds / 60.0
@@ -93,12 +113,18 @@ def start_scheduler(interval_hours: Optional[float] = None, interval_minutes: Op
         
     if effective_max_runs:
         print(f"Max runs configured: {effective_max_runs} run(s) total")
+    if target_end_date:
+        print(f"Scheduled until end date: {target_end_date.isoformat()}")
         
     history_topics = []
     run_count = 0
     
     try:
         while True:
+            if target_end_date and datetime.now() >= target_end_date:
+                print(f"\n[Hackathon Scheduler]: Reached target end date ({target_end_date}). Stopping scheduler!")
+                break
+
             run_count += 1
             print(f"\n--- [Run {run_count}{f' of {effective_max_runs}' if effective_max_runs else ''}] ---")
             final_state = run_hackathon_cycle(history_topics=history_topics)
