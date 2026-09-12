@@ -15,6 +15,10 @@ class HackathonPost(BaseModel):
     deep_dive_content: str = Field(description="Comprehensive markdown content with real code/schema snippets in SQL, Express, React, or Node")
     reviewer_qa_pairs: List[ReviewerQA] = Field(description="2-3 tough reviewer questions paired with winning technical answers")
     actionable_checklist: List[str] = Field(description="3-5 concrete step-by-step technical execution items")
+    architecture_diagram: Optional[str] = Field(
+        default=None,
+        description="Optional raw Mermaid JS diagram syntax (e.g. 'flowchart TD' or 'sequenceDiagram'). ONLY include if the topic visually benefits from an architecture diagram. Set to None if no diagram is needed."
+    )
 
 class HackathonAgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
