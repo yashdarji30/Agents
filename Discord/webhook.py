@@ -9,6 +9,19 @@ ARCHETYPE_COLORS = {
     "Reviewer Cheat Sheet": 0x8E44AD      # Vivid Purple
 }
 
+import base64
+
+def generate_mermaid_image_url(mermaid_code: Optional[str]) -> Optional[str]:
+    if not mermaid_code or not mermaid_code.strip():
+        return None
+    try:
+        clean_code = mermaid_code.strip()
+        encoded = base64.b64encode(clean_code.encode('utf-8')).decode('utf-8')
+        return f"https://mermaid.ink/img/{encoded}"
+    except Exception as e:
+        print(f"[Mermaid Encoder Warning]: Failed to encode diagram: {e}")
+        return None
+
 def build_discord_embed_payload(post: HackathonPost) -> Dict[str, Any]:
     color = ARCHETYPE_COLORS.get(post.post_type, 0x5865F2)
     
@@ -58,6 +71,11 @@ def build_discord_embed_payload(post: HackathonPost) -> Dict[str, Any]:
             "text": "PERN Hackathon Mentor AI Agent • Powered by Gemini 3.6 Flash"
         }
     }
+
+    if getattr(post, "architecture_diagram", None):
+        image_url = generate_mermaid_image_url(post.architecture_diagram)
+        if image_url:
+            embed["image"] = {"url": image_url}
     
     return {
         "content": "@everyone 🚀 **New Hackathon Insights & Guide Posted!**",
