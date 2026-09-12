@@ -1,5 +1,7 @@
 import os
+import time
 import requests
+import base64
 from typing import Optional, Dict, Any
 from agent.hackathon_state import HackathonPost
 
@@ -8,8 +10,6 @@ ARCHETYPE_COLORS = {
     "Case Study Walkthrough": 0x27AE60,   # Emerald Green
     "Reviewer Cheat Sheet": 0x8E44AD      # Vivid Purple
 }
-
-import base64
 
 def generate_mermaid_image_url(mermaid_code: Optional[str]) -> Optional[str]:
     if not mermaid_code or not mermaid_code.strip():
@@ -82,7 +82,13 @@ def build_discord_embed_payload(post: HackathonPost) -> Dict[str, Any]:
         "embeds": [embed]
     }
 
-def publish_to_discord(post: HackathonPost, webhook_url: Optional[str] = None) -> bool:
+def publish_to_discord(
+    post: HackathonPost,
+    webhook_url: Optional[str] = None,
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0
+) -> bool:
     url = webhook_url or os.getenv("DISCORD_WEBHOOK_URL")
     if not url:
         print("[Discord Webhook Error]: DISCORD_WEBHOOK_URL environment variable is missing.")
@@ -90,14 +96,53 @@ def publish_to_discord(post: HackathonPost, webhook_url: Optional[str] = None) -
         
     payload = build_discord_embed_payload(post)
     
-    try:
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code in (200, 204):
-            print(f"[Discord Webhook Success]: Post '{post.title}' published successfully.")
-            return True
-        else:
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code in (200, 204):
+                print(f"[Discord Webhook Success]: Post '{post.title}' published successfully.")
+                return True
+            
+            if response.status_code == 429:
+                retry_after_str = response.headers.get("Retry-After")
+                retry_after = None
+                if retry_after_str:
+                    try:
+                        retry_after = float(retry_after_str)
+                    except ValueError:
+                        pass
+                
+                if retry_after is None:
+                    try:
+                        resp_json = response.json()
+                        retry_after = float(resp_json.get("retry_after", 1.0))
+                    except Exception:
+                        retry_after = 1.0
+                
+                if retry_after > 100:
+                    retry_after = retry_after / 1000.0
+                
+                sleep_duration = retry_after + 0.1
+                print(f"[Discord Webhook Rate-Limited]: HTTP 429 received. Retrying after {sleep_duration:.2f}s (Attempt {attempt + 1}/{max_retries})...")
+                time.sleep(sleep_duration)
+                continue
+                
+            if response.status_code >= 500:
+                delay = initial_delay * (backoff_factor ** attempt)
+                print(f"[Discord Webhook Warning]: Server error HTTP {response.status_code}. Retrying in {delay:.2f}s (Attempt {attempt + 1}/{max_retries})...")
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                continue
+            
             print(f"[Discord Webhook Error]: HTTP {response.status_code} - {response.text}")
             return False
-    except Exception as e:
-        print(f"[Discord Webhook Exception]: Failed to publish to Discord: {e}")
-        return False
+
+        except requests.exceptions.RequestException as e:
+            delay = initial_delay * (backoff_factor ** attempt)
+            print(f"[Discord Webhook Exception]: Network/request error on attempt {attempt + 1}/{max_retries}: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+                
+    print(f"[Discord Webhook Error]: Failed to publish to Discord after {max_retries} attempts.")
+    return False
+
