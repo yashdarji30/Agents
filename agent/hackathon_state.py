@@ -23,3 +23,5 @@ class HackathonAgentState(TypedDict):
     current_post: Optional[HackathonPost]
     status: str
     error: Optional[str]
+    db_path: Optional[str]
+

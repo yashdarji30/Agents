@@ -31,7 +31,7 @@ def create_agent_node(llm_with_tools):
     return agent_node
 
 def build_graph(model_name: str = "gemini-3.6-flash"):
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY_1") or os.getenv("GOOGLE_API_KEY_2") or os.getenv("GOOGLE_API_KEY_3")
     tools = [web_search, fetch_web_page, evaluate_python_code]
     
     # Candidate Gemini models for automatic fallback resilience when 429 rate limits occur

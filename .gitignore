@@ -22,3 +22,7 @@ scratch/
 .superpowers/
 .idea/
 .vscode/
+
+# SQLite Databases
+*.db
+

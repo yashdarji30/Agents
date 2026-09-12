@@ -1,11 +1,12 @@
 import os
 import random
-from typing import Dict, Any
+from typing import Dict, Any, List
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
 
 from agent.hackathon_state import HackathonAgentState, HackathonPost
+from agent.db import get_posted_history, save_post_history, DEFAULT_DB_PATH
 from Discord.webhook import publish_to_discord
 
 HACKATHON_CATEGORIES = [
@@ -26,44 +27,62 @@ HACKATHON_ARCHETYPES = [
 def topic_curator_node(state: HackathonAgentState) -> Dict[str, Any]:
     topic_history = state.get("history_topics", [])
     archetype_history = state.get("history_archetypes", [])
-    
-    available_topics = [c for c in HACKATHON_CATEGORIES if c not in topic_history]
+    db_path = state.get("db_path") or DEFAULT_DB_PATH
+
+    # Fetch existing history from SQLite database
+    db_topics, db_archetypes = get_posted_history(db_path=db_path)
+
+    combined_topics = list(set(list(topic_history) + list(db_topics)))
+    combined_archetypes = list(set(list(archetype_history) + list(db_archetypes)))
+
+    available_topics = [c for c in HACKATHON_CATEGORIES if c not in combined_topics]
     if not available_topics:
         available_topics = HACKATHON_CATEGORIES
         topic_history = []
-        
-    available_archetypes = [a for a in HACKATHON_ARCHETYPES if a not in archetype_history]
+
+    available_archetypes = [a for a in HACKATHON_ARCHETYPES if a not in combined_archetypes]
     if not available_archetypes:
         available_archetypes = HACKATHON_ARCHETYPES
         archetype_history = []
-        
+
     selected_category = random.choice(available_topics)
     selected_archetype = random.choice(available_archetypes)
-    
+
     return {
         "history_topics": list(topic_history) + [selected_category],
         "history_archetypes": list(archetype_history) + [selected_archetype],
         "status": "topic_curated"
     }
 
+def get_api_keys() -> List[str]:
+    raw_keys = os.getenv("GOOGLE_API_KEYS", "")
+    keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
+    for var in ["GOOGLE_API_KEY", "GOOGLE_API_KEY_1", "GOOGLE_API_KEY_2", "GOOGLE_API_KEY_3"]:
+        val = os.getenv(var)
+        if val and val.strip() and val.strip() not in keys:
+            keys.append(val.strip())
+    return keys if keys else [None]
+
 def content_generator_node(state: HackathonAgentState) -> Dict[str, Any]:
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_keys = get_api_keys()
     current_category = state["history_topics"][-1]
     current_archetype = state.get("history_archetypes", ["Technical Defense Guide"])[-1]
-    print(f"[Content Generator]: Generating hackathon post for category '{current_category}' [Archetype: '{current_archetype}']...")
+    print(f"[Content Generator]: Generating hackathon post for category '{current_category}' [Archetype: '{current_archetype}'] (Active API Keys: {len(api_keys)})...")
     
     candidate_models = [
         "gemini-3.6-flash"
     ]
 
-    llm_instances = [
-        ChatGoogleGenerativeAI(
-            model=m,
-            google_api_key=api_key,
-            max_retries=3
-        ).with_structured_output(HackathonPost)
-        for m in candidate_models
-    ]
+    llm_instances = []
+    for key in api_keys:
+        for m in candidate_models:
+            llm_instances.append(
+                ChatGoogleGenerativeAI(
+                    model=m,
+                    google_api_key=key,
+                    max_retries=2
+                ).with_structured_output(HackathonPost)
+            )
     
     primary_llm = llm_instances[0]
     fallbacks = llm_instances[1:]
@@ -120,6 +139,18 @@ def discord_publisher_node(state: HackathonAgentState) -> Dict[str, Any]:
     
     success = publish_to_discord(post)
     if success:
+        db_path = state.get("db_path") or DEFAULT_DB_PATH
+        try:
+            save_post_history(
+                category=post.category,
+                archetype=post.post_type,
+                title=post.title,
+                db_path=db_path
+            )
+            print(f"[SQLite Persistence]: Saved published post '{post.title}' ({post.category} - {post.post_type}) to SQLite database.")
+        except Exception as db_err:
+            print(f"[SQLite Persistence Warning]: Failed to save post history: {db_err}")
+            
         return {"status": "published"}
     else:
         raise RuntimeError("Discord publish failed: DISCORD_WEBHOOK_URL may be missing or invalid in environment/secrets.")

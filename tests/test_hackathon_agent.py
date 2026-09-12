@@ -40,6 +40,7 @@ def test_content_generator_node_invokes_llm():
     with patch("agent.hackathon_graph.ChatGoogleGenerativeAI") as mock_llm_cls:
         mock_instance = MagicMock()
         mock_structured = MagicMock()
+        mock_structured.with_fallbacks.return_value = mock_structured
         mock_llm_cls.return_value.with_structured_output.return_value = mock_structured
         
         fake_post = HackathonPost(
@@ -140,8 +141,15 @@ def test_hackathon_scheduler_cycle():
 
 def test_full_hackathon_graph_workflow():
     from unittest.mock import patch, MagicMock
+    import tempfile
+    import os
     from agent.hackathon_graph import build_hackathon_graph
     from agent.hackathon_state import HackathonPost, ReviewerQA
+    from agent.db import get_posted_history
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db_path = tmp.name
+    tmp.close()
 
     fake_post = HackathonPost(
         title="PostgreSQL Index & Defense",
@@ -155,30 +163,42 @@ def test_full_hackathon_graph_workflow():
         actionable_checklist=["CREATE INDEX idx_user_id"]
     )
 
-    with patch("agent.hackathon_graph.ChatGoogleGenerativeAI") as mock_llm, \
-         patch("agent.hackathon_graph.publish_to_discord") as mock_publish:
-        
-        mock_structured = MagicMock()
-        mock_llm.return_value.with_structured_output.return_value = mock_structured
-        mock_structured.invoke.return_value = fake_post
-        mock_publish.return_value = True
+    try:
+        with patch("agent.hackathon_graph.ChatGoogleGenerativeAI") as mock_llm, \
+             patch("agent.hackathon_graph.publish_to_discord") as mock_publish:
+            
+            mock_structured = MagicMock()
+            mock_structured.with_fallbacks.return_value = mock_structured
+            mock_llm.return_value.with_structured_output.return_value = mock_structured
+            mock_structured.invoke.return_value = fake_post
+            mock_publish.return_value = True
 
-        app = build_hackathon_graph()
-        initial_state = {
-            "messages": [],
-            "history_topics": [],
-            "history_archetypes": [],
-            "current_post": None,
-            "status": "init",
-            "error": None
-        }
+            app = build_hackathon_graph()
+            initial_state = {
+                "messages": [],
+                "history_topics": [],
+                "history_archetypes": [],
+                "current_post": None,
+                "status": "init",
+                "error": None,
+                "db_path": db_path
+            }
 
-        final_state = app.invoke(initial_state)
+            final_state = app.invoke(initial_state)
 
-        assert final_state["status"] == "published"
-        assert len(final_state["history_topics"]) == 1
-        assert len(final_state["history_archetypes"]) == 1
-        assert mock_publish.called
+            assert final_state["status"] == "published"
+            assert len(final_state["history_topics"]) == 1
+            assert len(final_state["history_archetypes"]) == 1
+            assert mock_publish.called
+
+            # Verify SQLite persistence
+            saved_cats, saved_archs = get_posted_history(db_path=db_path)
+            assert saved_cats == ["PostgreSQL Schema & Index Optimization"]
+            assert saved_archs == ["Technical Defense Guide"]
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
 
 
 
