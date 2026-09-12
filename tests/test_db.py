@@ -58,3 +58,26 @@ def test_save_and_get_posted_history():
     finally:
         if os.path.exists(db_path):
             os.remove(db_path)
+
+def test_get_posted_history_limit():
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db_path = tmp.name
+    tmp.close()
+
+    try:
+        init_db(db_path)
+        for i in range(10):
+            save_post_history(
+                category=f"Category {i}",
+                archetype=f"Archetype {i}",
+                title=f"Title {i}",
+                db_path=db_path
+            )
+
+        categories, archetypes = get_posted_history(db_path, limit=5)
+        assert len(categories) == 5
+        assert categories == [f"Category {i}" for i in range(5, 10)]
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+

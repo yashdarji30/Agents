@@ -2,7 +2,10 @@ import ast
 import requests
 from bs4 import BeautifulSoup
 from langchain_core.tools import tool
-from duckduckgo_search import DDGS
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 @tool
 def web_search(query: str) -> str:

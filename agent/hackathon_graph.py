@@ -29,8 +29,8 @@ def topic_curator_node(state: HackathonAgentState) -> Dict[str, Any]:
     archetype_history = state.get("history_archetypes", [])
     db_path = state.get("db_path") or DEFAULT_DB_PATH
 
-    # Fetch existing history from SQLite database
-    db_topics, db_archetypes = get_posted_history(db_path=db_path)
+    # Fetch existing history from SQLite database (sliding window of last 5 posts)
+    db_topics, db_archetypes = get_posted_history(db_path=db_path, limit=5)
 
     combined_topics = list(set(list(topic_history) + list(db_topics)))
     combined_archetypes = list(set(list(archetype_history) + list(db_archetypes)))
@@ -136,7 +136,7 @@ def discord_publisher_node(state: HackathonAgentState) -> Dict[str, Any]:
     if not post:
         error_msg = state.get("error", "No current post generated")
         print(f"[Discord Publisher Skipped]: Skipping publish because no post is available. Cause: {error_msg}")
-        raise RuntimeError(f"Hackathon Agent cycle failed during content generation: {error_msg}")
+        return {"status": "generation_failed", "error": error_msg}
     
     success = publish_to_discord(post)
     if success:

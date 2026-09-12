@@ -33,7 +33,10 @@ def build_discord_embed_payload(post: HackathonPost) -> Dict[str, Any]:
     
     full_description = "\n".join(description_parts)
     if len(full_description) > 3900:
-        full_description = full_description[:3900] + "\n\n*(Content truncated for Discord limit)*"
+        truncated = full_description[:3900]
+        if truncated.count("```") % 2 != 0:
+            truncated += "\n```"
+        full_description = truncated + "\n\n*(Content truncated for Discord limit)*"
         
     qa_text_items = []
     for i, qa in enumerate(post.reviewer_qa_pairs, 1):

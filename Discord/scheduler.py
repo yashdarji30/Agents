@@ -83,9 +83,13 @@ def run_hackathon_cycle(history_topics: Optional[List[str]] = None) -> dict:
         "error": None
     }
     
-    final_state = app.invoke(initial_state)
-    print(f"[Hackathon Scheduler]: Cycle complete. Status: {final_state.get('status')}")
-    return final_state
+    try:
+        final_state = app.invoke(initial_state)
+        print(f"[Hackathon Scheduler]: Cycle complete. Status: {final_state.get('status')}")
+        return final_state
+    except Exception as e:
+        print(f"[Hackathon Scheduler Error]: Execution cycle encountered error: {e}")
+        return {"status": "cycle_failed", "error": str(e), "history_topics": history_topics or []}
 
 def start_scheduler(interval_hours: Optional[float] = None, interval_minutes: Optional[float] = None, max_runs: Optional[int] = None):
     load_dotenv()

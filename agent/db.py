@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from contextlib import closing
 
 DEFAULT_DB_PATH = "hackathon_history.db"
@@ -26,7 +26,7 @@ def init_db(db_path: str = DEFAULT_DB_PATH) -> None:
                 )
             """)
 
-def get_posted_history(db_path: str = DEFAULT_DB_PATH) -> Tuple[List[str], List[str]]:
+def get_posted_history(db_path: str = DEFAULT_DB_PATH, limit: Optional[int] = 5) -> Tuple[List[str], List[str]]:
     """
     Fetch lists of previously posted categories and archetypes.
     Returns:
@@ -38,7 +38,13 @@ def get_posted_history(db_path: str = DEFAULT_DB_PATH) -> Tuple[List[str], List[
     try:
         with closing(get_connection(db_path)) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT category, archetype FROM posted_history ORDER BY id ASC")
+            if limit is not None:
+                cursor.execute(
+                    "SELECT category, archetype FROM (SELECT id, category, archetype FROM posted_history ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
+                    (limit,)
+                )
+            else:
+                cursor.execute("SELECT category, archetype FROM posted_history ORDER BY id ASC")
             rows = cursor.fetchall()
             
             categories = [row["category"] for row in rows]
