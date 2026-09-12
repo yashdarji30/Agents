@@ -154,7 +154,9 @@ def discord_publisher_node(state: HackathonAgentState) -> Dict[str, Any]:
             
         return {"status": "published"}
     else:
-        raise RuntimeError("Discord publish failed: DISCORD_WEBHOOK_URL may be missing or invalid in environment/secrets.")
+        print(f"[Discord Publisher Fallback]: Webhook publishing failed or rate-limited after retries. Graph completing with publish_failed status.")
+        return {"status": "publish_failed"}
+
 
 
 def build_hackathon_graph():

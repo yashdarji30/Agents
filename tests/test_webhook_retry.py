@@ -63,5 +63,30 @@ class TestWebhookRetry(unittest.TestCase):
             result = publish_to_discord(self.sample_post, webhook_url=None)
             self.assertFalse(result)
 
+from agent.hackathon_graph import discord_publisher_node
+
+class TestDiscordPublisherNode(unittest.TestCase):
+    @patch("agent.hackathon_graph.publish_to_discord")
+    def test_discord_publisher_node_success(self, mock_publish):
+        mock_publish.return_value = True
+        post = MagicMock()
+        post.category = "Test Cat"
+        post.post_type = "Technical Defense Guide"
+        post.title = "Test Post"
+
+        state = {"current_post": post, "db_path": ":memory:"}
+        res = discord_publisher_node(state)
+        self.assertEqual(res["status"], "published")
+
+    @patch("agent.hackathon_graph.publish_to_discord")
+    def test_discord_publisher_node_fallback(self, mock_publish):
+        mock_publish.return_value = False
+        post = MagicMock()
+
+        state = {"current_post": post}
+        res = discord_publisher_node(state)
+        self.assertEqual(res["status"], "publish_failed")
+
 if __name__ == "__main__":
     unittest.main()
+
