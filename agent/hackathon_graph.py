@@ -111,6 +111,7 @@ Requirements for Archetype '{current_archetype}':
 5. Deep Dive Content: Lengthy, comprehensive technical markdown guide. Include actual code/schema snippets (e.g. SQL queries, Express middleware, React custom hooks) relevant to the PERN stack.
 6. Reviewer QA Pairs: 2-3 tough questions a judge will ask about this topic/stack with bulletproof, winning answers.
 7. Actionable Checklist: 3-5 concrete step-by-step execution items for the team.
+8. Architecture Diagram (Optional): Evaluate if this topic/archetype visually benefits from a dynamic system flowchart or sequence diagram. If beneficial, provide clean raw Mermaid JS syntax without backticks. If not needed, set to null.
 """
     
     try:
